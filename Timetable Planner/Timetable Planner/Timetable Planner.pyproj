@@ -21,6 +21,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="classes.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="nusmod_api_getter.py">
       <SubType>Code</SubType>
     </Compile>
