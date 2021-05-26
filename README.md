@@ -23,5 +23,7 @@ We hope to improve the timetable planning process, by making the planning of tim
 ## Parameters
 
 - Time that lessons can fall on
-- Time between each lesson
+- Time between each lesson (for all lessons)
+- Lunch break everyday (12 to 2)
 - Online or physical class
+- 1 day free (can select ur day)
