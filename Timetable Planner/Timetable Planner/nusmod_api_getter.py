@@ -1,6 +1,7 @@
 from urllib.request import urlopen
 import json
 import classes
+import operator
 
 def create_module_class(acad_year, module_code, sem):
 
@@ -22,25 +23,79 @@ def create_module_class(acad_year, module_code, sem):
 			module.addTutorial(new_lesson)
 		elif (lesson['lessonType'] == 'Lecture'):
 			module.addLecture(new_lesson)
+		elif (lesson['lessonType'] == 'Laboratory'):
+			module.addLaboratory(new_lesson)
 	
 	return module
 
 def parameterise(module, module_code, parameters):
 	new_module = classes.Module(module_code)
+	nullLesson = classes.Lesson("", 0, 0, [], "", "", "None", "", "", "")
 
 	## Filter by time of lesson and day off first
-	for lesson in module.lecture_list:
-		if (lesson.day != parameters.dayFree and lesson.startTime in parameters.startTimeList and lesson.endTime in parameters.endTimeList):
-			new_module.addLecture(lesson)
+	if module.lecture_list[0] == nullLesson:
+		new_module.addLecture(nullLesson)
+	else:
+		for lesson in module.lecture_list:
+			if (lesson.day != parameters.dayFree and lesson.startTime in parameters.startTimeList and lesson.endTime in parameters.endTimeList):
+				new_module.addLecture(lesson)
 			
 
 	for lesson in module.tutorial_list:
+
 		if (lesson.day != parameters.dayFree and lesson.startTime in parameters.startTimeList and lesson.endTime in parameters.endTimeList):
 
-			## add if online/both option selected
-			if (parameters.lessonMode != 'f2f' and lesson.venue == 'E-Learn_C'):
-				new_module.addTutorial(lesson)
+			if parameters.lessonMode == 'f2f':
+				if lesson.venue.startswith('E-Learn'):
+					lesson.lessonTypeNumber = 1
+				else:
+					lesson.lessonTypeNumber = 0
+			elif parameters.lessonMode == 'online':
+				if lesson.venue.startswith('E-Learn'):
+					lesson.lessonTypeNumber = 0
+				else:
+					lesson.lessonTypeNumber = 1
+			
+			new_module.addTutorial(lesson)
+	new_module.tutorial_list = sorted(new_module.tutorial_list, key=operator.attrgetter('lessonTypeNumber'))
 
-			## add if f2f/both option selected
-			if (parameters.lessonMode != 'online' and lesson.venue != 'E-Learn_C'):
-				new_module.addTutorial(lesson)
+
+	for lesson in module.laboratory_list:
+		if (lesson.day != parameters.dayFree and lesson.startTime in parameters.startTimeList and lesson.endTime in parameters.endTimeList):
+
+			if parameters.lessonMode == 'f2f':
+				if lesson.venue.startswith('E-Learn'):
+					lesson.lessonTypeNumber = 1
+				else:
+					lesson.lessonTypeNumber = 0
+			elif parameters.lessonMode == 'online':
+				if lesson.venue.startswith('E-Learn'):
+					lesson.lessonTypeNumber = 0
+				else:
+					lesson.lessonTypeNumber = 1
+			
+			new_module.addLaboratory(lesson)
+	new_module.laboratory_list = sorted(new_module.laboratory_list, key=operator.attrgetter('lessonTypeNumber'))
+
+	return new_module
+
+## IMPT @NOMP.RONG USE THIS
+## args takes in all modules the student input
+def create_student(acad_year, sem, *args):
+	
+	moduleList = []
+	nullLesson = classes.Lesson("", 0, 0, [], "", "", "None", "", "", "")
+	module_dict = {}
+
+	for module_code in args:
+		mod = create_module_class(acad_year, module_code, sem)
+		mod.updateLength()
+		module_dict[module_code] = ["", "", ""]
+		if mod.lecture_list != [] or mod.laboratory_list != [nullLesson] \
+			or mod.tutorial_list != [nullLesson]: ##Ignore mods like MA1521 without lessons
+			moduleList.append(mod)
+	student = classes.Student(moduleList, module_dict)
+	student.forceLecture()
+	
+	return student
+
