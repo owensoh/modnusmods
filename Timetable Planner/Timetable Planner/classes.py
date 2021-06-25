@@ -51,6 +51,7 @@ class Module:
         self.lecture_list = [self.nullLesson] ## array of Lesson class of all lectures
         self.tutorial_list = [self.nullLesson] ## array of Lesson class of all tutorials
         self.laboratory_list = [self.nullLesson]
+        self.sectional_list = [self.nullLesson]
         self.length = 0
         self.lectureClassNo = []
 
@@ -71,6 +72,11 @@ class Module:
             self.laboratory_list = []
         self.laboratory_list.append(lesson)
 
+    def addSectional(self, lesson):
+        if self.sectional_list == [self.nullLesson]:
+            self.sectional_list = []
+        self.laboratory_list.append(lesson)
+
     def removeLecture(self, lesson):
         if lesson in self.lecture_list:
             self.lecture_list.remove(lesson)
@@ -83,6 +89,10 @@ class Module:
         if lesson in self.laboratory_list:
             self.laboratory_list.remove(lesson)
 
+    def removeSectional(self, lesson):
+        if lesson in self.sectional_list:
+            self.sectional_list.remove(lesson)
+
     def resetLecture(self):
         self.lecture_list = []
 
@@ -92,8 +102,11 @@ class Module:
     def resetLaboratory(self):
         self.laboratory_list = []
 
+    def resetSectional(self):
+        self.sectional_list = []
+
     def updateLength(self):
-        self.length = len(self.lecture_list) + len(self.tutorial_list) + len(self.laboratory_list)
+        self.length = len(self.lecture_list) + len(self.tutorial_list) + len(self.laboratory_list) + len(self.sectional_list)
 
     def __str__(self):
         for i in self.lectureClassNo:
@@ -127,7 +140,7 @@ class Student:
         self.nullLesson = Lesson("", 0, 0, [], "", "", "None", "", "", "")
         for days in range(5):
             sub_array = []
-            for hours in range(10):
+            for hours in range(12):
                 sub_array.append(self.nullLesson)
             self.timetable.append(sub_array)
         self.days = {"Monday":0, "Tuesday":1, "Wednesday":2, "Thursday":3, "Friday":4}
@@ -244,6 +257,25 @@ class Student:
                     for labs in dict.keys():
                         self.allModuleLessonList.append(dict[labs])
 
+        for module in self.moduleList:
+            if module.sectional_list == []:
+                self.cannotGetTimetable()
+                print(module.moduleCode + " cannot sectional")
+            else:
+                if module.sectional_list == [self.nullLesson]:
+                    self.allModuleLessonList.append(module.sectional_list)
+                elif module.sectional_list[0].classNo[0].isnumeric():
+                    self.allModuleLessonList.append(module.sectional_list)
+                else:
+                    dict = {}
+                    for lesson in module.sectional_list:
+                        letter = lesson.classNo[0]
+                        if letter in dict.keys():
+                            dict[letter].append(lesson)
+                        else:
+                            dict[letter] = [lesson]
+                    for labs in dict.keys():
+                        self.allModuleLessonList.append(dict[labs])
 
 
     def generate(self, param):
@@ -272,7 +304,7 @@ class Student:
 
                         possible = True
                         for less in classNolst:
-                            print(less.moduleCode, less.startTime, less.endTime, less.day)
+                            #print(less.moduleCode, less.startTime, less.endTime, less.day)
                             day = self.days[less.day]
                             startTime = less.startTime - 8
                             endTime = less.endTime - 8
@@ -285,7 +317,7 @@ class Student:
                                     if self.timetable[day][tempStart] != self.nullLesson:
                                         possible = False
                                         break
-                                if tempEnd <= 9:
+                                if tempEnd <= 11:
                                     if self.timetable[day][tempEnd] != self.nullLesson:
                                         possible = False 
                                         break
@@ -307,10 +339,10 @@ class Student:
 
                         
                         if lessonAdded:
-                            for l in classNolst:
-                                print(l.moduleCode, l.lessonType, l.startTime, l.endTime, l.day)
-                            print(self.debugTimetable())
-                            print(i, len(allModuleLessonList) - 1)
+                            #for l in classNolst:
+                                #print(l.moduleCode, l.lessonType, l.startTime, l.endTime, l.day)
+                            #print(self.debugTimetable())
+                            #print(i, len(allModuleLessonList) - 1)
                             
                             new_allModuleLessonList = allModuleLessonList.copy()
                             new_allModuleLessonList[i] = [self.nullLesson]
@@ -318,12 +350,12 @@ class Student:
                                 for l in classNolst:
                                     self.removeLesson(l)
                                 rejlst.append(l.classNo)
-                                print(lesson.moduleCode, lesson.lessonType, lesson.startTime, lesson.endTime, lesson.day, 'yikes')
+                                #print(lesson.moduleCode, lesson.lessonType, lesson.startTime, lesson.endTime, lesson.day, 'yikes')
                                 lessonAdded = False
                             else:
                                 return True
                         else:
-                            print(lesson.moduleCode, lesson.lessonType, lesson.startTime, lesson.endTime, lesson.day, 'yikes')
+                            #print(lesson.moduleCode, lesson.lessonType, lesson.startTime, lesson.endTime, lesson.day, 'yikes')
                             pass
                 else:
                     lessonAdded = True
@@ -350,13 +382,16 @@ class Student:
                     elif hour.lessonType.startswith("Laboratory"):
                         if hour not in self.module_dict[hour.moduleCode][2]:
                             self.module_dict[hour.moduleCode][2].append(hour)
+                    elif hour.lessonType.startswith("Sectional"):
+                        if hour not in self.module_dict[hour.moduleCode][3]:
+                            self.module_dict[hour.moduleCode][3].append(hour)
 
     def generateNusmodsLink(self, sem):
         if sem == 1:
             link = "https://nusmods.com/timetable/sem-1/share?"
         elif sem == 2:
             link = "https://nusmods.com/timetable/sem-2/share?"
-        lessonType_lst = ['LEC', 'TUT', 'LAB']
+        lessonType_lst = ['LEC', 'TUT', 'LAB', 'SEC']
         for module in self.module_dict.keys():
             link += module + "="
             for i in range(len(self.module_dict[module])):

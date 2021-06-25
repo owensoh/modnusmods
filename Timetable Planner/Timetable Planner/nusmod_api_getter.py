@@ -17,16 +17,17 @@ def create_module_class(acad_year, module_code, sem):
 	module = classes.Module(module_code)
 
 	for lesson in semesterData:
-		new_lesson = classes.Lesson(lesson['classNo'], int(lesson['startTime'][:2]), int(lesson['endTime'][:2]), lesson['weeks'], lesson['venue'], 
-					  lesson['day'], lesson['lessonType'], lesson['size'], lesson['covidZone'], module_code)
+		new_lesson = classes.Lesson(lesson['classNo'], int(lesson['startTime'][:2]), \
+			int(lesson['endTime'][:2]) + int(lesson['endTime'][-2] != '0'), lesson['weeks'], \
+			lesson['venue'], lesson['day'], lesson['lessonType'], lesson['size'], lesson['covidZone'], module_code)
 		if (lesson['lessonType'].startswith('Tutorial')):
 			module.addTutorial(new_lesson)
 		elif (lesson['lessonType'] == 'Lecture'):
 			module.addLecture(new_lesson)
-			#if module_code == 'ST2334':
-			#	print(new_lesson.classNo, new_lesson.startTime, new_lesson.endTime)
 		elif (lesson['lessonType'].startswith('Laboratory')):
 			module.addLaboratory(new_lesson)
+		elif (lesson['lessonType'].startswith('Sectional')):
+			module.addSectional(new_lesson)
 	
 	return module
 
@@ -36,7 +37,7 @@ def parameterise(module, module_code, parameters):
 
 	## Filter by time of lesson and day off first
 
-	print(module_code, module.lecture_list[0].classNo)
+	#print(module_code, module.lecture_list[0].classNo)
 	if len(module.lecture_list) > 1:
 		new_module.resetLecture()
 
@@ -93,6 +94,26 @@ def parameterise(module, module_code, parameters):
 			new_module.addLaboratory(lesson)
 	new_module.laboratory_list = sorted(new_module.laboratory_list, key=operator.attrgetter('lessonTypeNumber'))
 
+	if len(module.sectional_list) > 1:
+		new_module.resetLaboratory()
+
+	for lesson in module.sectional_list:
+		if (lesson.day != parameters.dayFree and lesson.startTime in parameters.startTimeList and lesson.endTime in parameters.endTimeList):
+
+			if parameters.lessonMode == 'f2f':
+				if lesson.venue.startswith('E-Learn'):
+					lesson.lessonTypeNumber = 1
+				else:
+					lesson.lessonTypeNumber = 0
+			elif parameters.lessonMode == 'online':
+				if lesson.venue.startswith('E-Learn'):
+					lesson.lessonTypeNumber = 0
+				else:
+					lesson.lessonTypeNumber = 1
+			
+			new_module.addLaboratory(lesson)
+	new_module.sectional_list = sorted(new_module.sectional_list, key=operator.attrgetter('lessonTypeNumber'))
+
 	return new_module
 
 ## IMPT @NOMP.RONG USE THIS
@@ -106,9 +127,9 @@ def create_student(acad_year, sem, *args):
 	for module_code in args:
 		mod = create_module_class(acad_year, module_code, sem)
 		mod.updateLength()
-		module_dict[module_code] = [[], [], []]
+		module_dict[module_code] = [[], [], [], []]
 		if mod.lecture_list != [nullLesson] or mod.laboratory_list != [nullLesson] \
-			or mod.tutorial_list != [nullLesson]: ##Ignore mods like MA1521 without lessons
+			or mod.tutorial_list != [nullLesson] or mod.sectional_list != [nullLesson]: ##Ignore mods like MA1521 without lessons
 			moduleList.append(mod)
 	student = classes.Student(moduleList, module_dict)
 	student.forceLecture()
