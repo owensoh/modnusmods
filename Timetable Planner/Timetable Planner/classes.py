@@ -2,7 +2,7 @@ import nusmod_api_getter as func
 import operator
 
 class Lesson:
-    def __init__(self, classNo, startTime, endTime, weeks, venue, day, lessonType, size, covidZone, moduleCode):
+    def __init__(self, classNo, startTime, endTime, weeks, venue, day, lessonType, size, covidZone, moduleCode, actualStartTime, actualEndTime):
         self.classNo = classNo
         self.startTime = startTime
         self.endTime = endTime
@@ -14,6 +14,8 @@ class Lesson:
         self.covidZone = covidZone
         self.moduleCode = moduleCode
         self.lessonTypeNumber = 0
+        self.actualStartTime = actualStartTime
+        self.actualEndTime = actualEndTime
 
     def __str__(self):
         return " " + self.moduleCode + " (" + self.lessonType + ")"
@@ -47,7 +49,7 @@ class Lesson:
 class Module:
     def __init__(self, moduleCode):
         self.moduleCode = moduleCode
-        self.nullLesson = Lesson("", 0, 0, [], "", "", "None", "", "", "")
+        self.nullLesson = Lesson("", 0, 0, [], "", "", "None", "", "", "", "", "")
         self.lecture_list = [self.nullLesson] ## array of Lesson class of all lectures
         self.tutorial_list = [self.nullLesson] ## array of Lesson class of all tutorials
         self.laboratory_list = [self.nullLesson]
@@ -137,7 +139,7 @@ class Student:
     def __init__(self, moduleList, module_dict):
         self.moduleList = moduleList
         self.timetable = []
-        self.nullLesson = Lesson("", 0, 0, [], "", "", "None", "", "", "")
+        self.nullLesson = Lesson("", 0, 0, [], "", "", "None", "", "", "", "", "")
         for days in range(5):
             sub_array = []
             for hours in range(12):

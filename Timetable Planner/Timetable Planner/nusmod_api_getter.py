@@ -19,7 +19,7 @@ def create_module_class(acad_year, module_code, sem):
 	for lesson in semesterData:
 		new_lesson = classes.Lesson(lesson['classNo'], int(lesson['startTime'][:2]), \
 			int(lesson['endTime'][:2]) + int(lesson['endTime'][-2] != '0'), lesson['weeks'], \
-			lesson['venue'], lesson['day'], lesson['lessonType'], lesson['size'], lesson['covidZone'], module_code)
+			lesson['venue'], lesson['day'], lesson['lessonType'], lesson['size'], lesson['covidZone'], module_code, lesson['startTime'], lesson['endTime'])
 		if (lesson['lessonType'].startswith('Tutorial')):
 			module.addTutorial(new_lesson)
 		elif (lesson['lessonType'] == 'Lecture'):
@@ -33,7 +33,7 @@ def create_module_class(acad_year, module_code, sem):
 
 def parameterise(module, module_code, parameters):
 	new_module = classes.Module(module_code)
-	nullLesson = classes.Lesson("", 0, 0, [], "", "", "None", "", "", "")
+	nullLesson = classes.Lesson("", 0, 0, [], "", "", "None", "", "", "", "", "")
 
 	## Filter by time of lesson and day off first
 
@@ -118,13 +118,13 @@ def parameterise(module, module_code, parameters):
 
 ## IMPT @NOMP.RONG USE THIS
 ## args takes in all modules the student input
-def create_student(acad_year, sem, *args):
+def create_student(acad_year, sem, lst):
 	
 	moduleList = []
-	nullLesson = classes.Lesson("", 0, 0, [], "", "", "None", "", "", "")
+	nullLesson = classes.Lesson("", 0, 0, [], "", "", "None", "", "", "", "", "")
 	module_dict = {}
 
-	for module_code in args:
+	for module_code in lst:
 		mod = create_module_class(acad_year, module_code, sem)
 		mod.updateLength()
 		module_dict[module_code] = [[], [], [], []]
@@ -136,3 +136,31 @@ def create_student(acad_year, sem, *args):
 	
 	return student
 
+# {'startTime': '8', 'endTime': '17', 'timeBetween': '2', 'lunchBreak': True, 'lessonMode': 'online', 'dayFree': 
+# 'Thursday', 'modules': ['CS2040S', 'CS2030S', 'GER1000', 'CS2040C', 'CS2100', 'GEQ1000'], 'sem': '1', 'acadYear': '2021-2022'}
+
+def parseJianrong(dict):
+	startTimeList = []
+	endTimeList = []
+	acadYear = ""
+	sem = 0
+	timeBetween = 0
+	lessonMode = ""
+	dayFree = ""
+	modules = []
+	for i in range(int(dict['startTime']), int(dict['endTime'])):
+		startTimeList.append(i)
+		endTimeList.append(i+1)
+	if dict['lunchBreak']:
+		startTimeList.remove(12)
+		startTimeList.remove(13)
+		endTimeList.remove(13)
+		endTimeList.remove(14)
+	lessonMode = dict['lessonMode']
+	timeBetween = int(dict['timeBetween'])
+	dayFree = dict['dayFree']
+	sem = int(dict['sem'])
+	acadYear = dict['acadYear']
+	modules = dict['modules']
+	return classes.Parameters(startTimeList, endTimeList, timeBetween, lessonMode, dayFree),\
+	   sem, create_student(acadYear, sem, modules)
