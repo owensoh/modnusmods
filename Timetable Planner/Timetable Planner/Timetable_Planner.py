@@ -2,6 +2,7 @@ import nusmod_api_getter as func
 import classes
 import webbrowser
 
+
 def TestCase1():
 	# 5 modules, no additional parameters given
 	return classes.Parameters([8, 9, 10, 11, 12, 13, 14, 15, 16, 17], [9, 10, 11, 12, 13, 14, 15, 16, 17, 18], 0, "", ""),\
@@ -57,38 +58,81 @@ def newTestCase1():
 	   'dayFree': 'Friday', 'modules': ["CS2105", "CS2106", "ST2334", "LAJ1201", "CS2113"],\
 	  'sem': '1', 'acadYear': '2021-2022'})
 
+def newTestCase2():
+	return func.parseJianrong({'startTime': '8', 'endTime': '18', 'timeBetween': '0', 'lunchBreak': True, 'lessonMode': 'online',\
+	   'dayFree': 'Friday', 'modules': ["CS1010"],\
+	  'sem': '1', 'acadYear': '2021-2022'})
+
+def newerTestCase1():
+	return func.parseJianrong({'startTime': '8', 'endTime': '18', 'timeBetween': '0', 'lunchBreak': False, 'lessonMode': '',\
+	   'dayFree': '', 'modules1': ["CS2105", "CS2106", "ST2334", "CS2113", "LAJ1201", "CS2107"], \
+	   'modules2': ["ST2334", "LAJ1201", "CS2107", "CS2100", "GES1041"],
+	  'sem': '1', 'acadYear': '2021-2022'}, 2) 
+
 if __name__ == "__main__":
 	
-	#param, sem, student = TestCase1()
-	#param, sem, student = TestCase2()
-	#param, sem, student = TestCase3()
-	#param, sem, student = TestCase4()
-	#param, sem, student = TestCase5()
-	#param, sem, student = TestCase6()
-	#param, sem, student = TestCase7()
-	#param, sem, student = TestCase8()
-	#param, sem, student = TestCase9()
-	#param, sem, student = TestCase10()
-	param, sem, student = newTestCase1()
+	# SEND USER NUMBER HERE
+	user = 2
 
-	if student.impossible:
-		print("sadge")
-	else:
-		print(student)
-		print("____________")
-		student.addParam(param)
+	if user == 1:
+		#param, sem, student = TestCase1()
+		#param, sem, student = TestCase2()
+		#param, sem, student = TestCase3()
+		#param, sem, student = TestCase4()
+		#param, sem, student = TestCase5()
+		#param, sem, student = TestCase6()
+		#param, sem, student = TestCase7()
+		#param, sem, student = TestCase8()
+		#param, sem, student = TestCase9()
+		#param, sem, student = TestCase10()
+		param, sem, student = newTestCase1()
+		#param, sem, student = newTestCase2()
+
 		if student.impossible:
-			print('sadge')
+			print("sadge")
 		else:
-			student.generate(param)
 			print(student)
+			print("____________")
+			student.addParam(param)
 			if student.impossible:
 				print('sadge')
 			else:
-				link = student.generateNusmodsLink(sem)
-				print(link)
-				# FOR TESTING PURPOSES 
-				webbrowser.open(link)
+				student.generate(param)
+				print(student)
+				if student.impossible:
+					print('sadge')
+				else:
+					link = student.generateNusmodsLink(sem)
+					print(link)
+
+					# FOR TESTING PURPOSES 
+					#webbrowser.open(link)
+
+	elif user == 2:
+		param, sem, student = newerTestCase1()
+		if student.impossible:
+			print("sadge")
+		else:
+			print(student)
+			print("____________")
+			student.addParam(param)
+			if student.impossible:
+				print('sadge')
+			else:
+				student.generate(param)
+				print(student)
+				if student.impossible:
+					print('sadge')
+				else:
+					link = student.generateNusmodsLink(sem)
+					print(link)
+
+					# FOR TESTING PURPOSES 
+					#webbrowser.open(link)
+		
+
+
+				
 
 #Test Cases:
 
@@ -100,11 +144,4 @@ if __name__ == "__main__":
 
 #DONEZO
 
-#observe 2 tutorials for LAJ1201 [A1, B1] --> if lesson name starts with letter, have 2 lists to run thru
-
-# observe 2 lectures for st2334 (yes need add 2nd lecture slot) --> after adding lesson, go thru list to see if got anymore same lesson number to add
-# include the initial lect timtetable also
-
-#Thursday st2334 lecture need remove mon and thurs, cs2113 tut not detecting error need add nulllesson
-
-#biz sectionals. need change timetable to 30min intervals (SCRAPED), starttime endtime calc, add sec column
+#UPDATE MODULE DICT NXT

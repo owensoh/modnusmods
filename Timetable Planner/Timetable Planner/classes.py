@@ -21,7 +21,8 @@ class Lesson:
         return " " + self.moduleCode + " (" + self.lessonType + ")"
 
     def __eq__(self, other):
-        return self.moduleCode == other.moduleCode and self.classNo == other.classNo and self.lessonType == other.lessonType
+        return self.moduleCode == other.moduleCode and self.classNo == other.classNo and \
+            self.lessonType == other.lessonType and self.actualStartTime == other.actualStartTime and self.day == other.day
 
     def purinto(self):
         print("Class No: ")
@@ -56,6 +57,7 @@ class Module:
         self.sectional_list = [self.nullLesson]
         self.length = 0
         self.lectureClassNo = []
+        self.sectionalClassNo = []
 
     def addLecture(self, lesson):
         if self.lecture_list == [self.nullLesson]:
@@ -77,7 +79,9 @@ class Module:
     def addSectional(self, lesson):
         if self.sectional_list == [self.nullLesson]:
             self.sectional_list = []
-        self.laboratory_list.append(lesson)
+        self.sectional_list.append(lesson)
+        if lesson.classNo not in self.sectionalClassNo:
+            self.sectionalClassNo.append(lesson.classNo)
 
     def removeLecture(self, lesson):
         if lesson in self.lecture_list:
@@ -111,20 +115,10 @@ class Module:
         self.length = len(self.lecture_list) + len(self.tutorial_list) + len(self.laboratory_list) + len(self.sectional_list)
 
     def __str__(self):
-        for i in self.lectureClassNo:
-            print(i)
         return self.moduleCode 
 
-    def pint(self):
-        for i in self.lecture_list:
-            i.purinto()
-            print("----------------------")
-        #for i in self.tutorial_list:
-        #    i.purinto()
-        #    print("-------------------------")
-        #for i in self.laboratory_list:
-        #    i.purinto()
-        #    print("-------------------------")
+    def __eq__(self, other):
+        return self.moduleCode == other.moduleCode
 
 class Parameters:
     ## Lunch timing is pre adjusted in the timeList
@@ -136,19 +130,21 @@ class Parameters:
         self.dayFree = dayFree ## day of the week that wants to be kept free  
 
 class Student:
-    def __init__(self, moduleList, module_dict):
+    def __init__(self, moduleList, module_dict, user, common_mods):
         self.moduleList = moduleList
         self.timetable = []
         self.nullLesson = Lesson("", 0, 0, [], "", "", "None", "", "", "", "", "")
         for days in range(5):
             sub_array = []
             for hours in range(12):
-                sub_array.append(self.nullLesson)
+                sub_array.append([self.nullLesson, self.nullLesson])
             self.timetable.append(sub_array)
         self.days = {"Monday":0, "Tuesday":1, "Wednesday":2, "Thursday":3, "Friday":4}
         self.allModuleLessonList = []
         self.impossible = False
         self.module_dict = module_dict
+        self.user = user
+        self.common_mods = common_mods
 
 
     def __str__(self):
@@ -156,7 +152,9 @@ class Student:
         for days in self.timetable:
             for hours in days:
                 string += "|"
-                string += str(hours)
+                string += str(hours[0])
+                string += ", "
+                string += str(hours[1])
                 string += " "
             string += "|\n" 
         return string
@@ -166,22 +164,24 @@ class Student:
         for days in self.timetable:
             for hours in days:
                 string += "|"
-                string += str(hours)
+                string += str(hours[0])
+                string += ", "
+                string += str(hours[1])
                 string += " "
             string += "|\n" 
         return string
 
-    def addLesson(self, lesson):
+    def addLesson(self, lesson, index):
         for i in range(lesson.endTime - lesson.startTime):
-            if self.timetable[self.days[lesson.day]][lesson.startTime + i - 8] != self.nullLesson:
+            if self.timetable[self.days[lesson.day]][lesson.startTime + i - 8][index] != self.nullLesson:
                 return False
         for i in range(lesson.endTime - lesson.startTime):
-            self.timetable[self.days[lesson.day]][lesson.startTime + i - 8] = lesson
+            self.timetable[self.days[lesson.day]][lesson.startTime + i - 8][index] = lesson
         return True
 
-    def removeLesson(self, lesson):
+    def removeLesson(self, lesson, index):
         for i in range(lesson.endTime - lesson.startTime):
-            self.timetable[self.days[lesson.day]][lesson.startTime + i - 8] = self.nullLesson
+            self.timetable[self.days[lesson.day]][lesson.startTime + i - 8][index] = self.nullLesson
 
 
     ## Trigger print error
@@ -190,43 +190,70 @@ class Student:
         self.impossible = True
 
     def forceLecture(self):
+
         done = True
-        for module in self.moduleList:
-            if len(module.lectureClassNo) == 1:
-                for lecture in module.lecture_list:
-                    done = self.addLesson(lecture)
+        for i in range(len(self.moduleList)):
+            for module in self.moduleList[i]:
+                if len(module.lectureClassNo) == 1:
+                    for lecture in module.lecture_list:
+                        done = self.addLesson(lecture, i)
+                        if done == False:
+                            self.cannotGetTimetable()
+                            break
+                    module.lecture_list = [self.nullLesson]
                     if done == False:
-                        self.cannotGetTimetable()
                         break
-                module.lecture_list = [self.nullLesson]
-                if done == False:
-                    break
+
+        done = True
+        for i in range(len(self.moduleList)):
+            for module in self.moduleList[i]:
+                if len(module.sectionalClassNo) == 1:
+                    for lecture in module.sectional_list:
+                        done = self.addLesson(lecture, i)
+                        if done == False:
+                            self.cannotGetTimetable()
+                            break
+                    module.sectional_list = [self.nullLesson]
+                    if done == False:
+                        break
 
     def addParam(self, param):
+
+
+        for mod in self.common_mods:
+            if mod in self.moduleList[0]:
+                self.moduleList[0].remove(mod)
+            if mod in self.moduleList[1]:
+                self.moduleList[1].remove(mod)
+
+
         new_moduleList = []
-        for module in self.moduleList:
-            new_moduleList.append(func.parameterise(module, module.moduleCode, param))
+        new_comm_moduleList = []
+        
+        # Common mods
+        for module in self.common_mods:
+            new_comm_moduleList.append(func.parameterise(module, module.moduleCode, param))
 
-        for module in new_moduleList:
+        for module in new_comm_moduleList:
             module.updateLength()
-        self.moduleList = sorted(new_moduleList, key=operator.attrgetter('length'))
+        self.common_mods = sorted(new_comm_moduleList, key=operator.attrgetter('length'))
 
-        for module in self.moduleList:
-            self.allModuleLessonList.append(module.lecture_list)
+        for module in self.common_mods:
+            self.allModuleLessonList.append([module.lecture_list, 2])
             if module.lecture_list == []:
                 self.cannotGetTimetable()
                 print(module.moduleCode + " cannot lecture")
                 
 
-        for module in self.moduleList:
+        for module in self.common_mods:
             if module.tutorial_list == []:
                 self.cannotGetTimetable()
                 print(module.moduleCode + " cannot tutorial")
             else:
                 if module.tutorial_list == [self.nullLesson]:
-                    self.allModuleLessonList.append(module.tutorial_list)
+                    self.allModuleLessonList.append([module.tutorial_list, 2])
                 elif module.tutorial_list[0].classNo[0].isnumeric():
-                    self.allModuleLessonList.append(module.tutorial_list)
+                    self.allModuleLessonList.append([module.tutorial_list, 2])
                 else:
                     dict = {}
                     for lesson in module.tutorial_list:
@@ -236,48 +263,86 @@ class Student:
                         else:
                             dict[letter] = [lesson]
                     for tuts in dict.keys():
-                        self.allModuleLessonList.append(dict[tuts])
+                        self.allModuleLessonList.append([dict[tuts], 2])
             
 
-        for module in self.moduleList:
+        for module in self.common_mods:
             if module.laboratory_list == []:
                 self.cannotGetTimetable()
                 print(module.moduleCode + " cannot laboratory")
             else:
                 if module.laboratory_list == [self.nullLesson]:
-                    self.allModuleLessonList.append(module.laboratory_list)
-                elif module.laboratory_list[0].classNo[0].isnumeric():
-                    self.allModuleLessonList.append(module.laboratory_list)
+                    self.allModuleLessonList.append([module.laboratory_list, 2])
                 else:
-                    dict = {}
-                    for lesson in module.laboratory_list:
-                        letter = lesson.classNo[0]
-                        if letter in dict.keys():
-                            dict[letter].append(lesson)
-                        else:
-                            dict[letter] = [lesson]
-                    for labs in dict.keys():
-                        self.allModuleLessonList.append(dict[labs])
+                    self.allModuleLessonList.append([module.laboratory_list, 2])
 
-        for module in self.moduleList:
+
+        for module in self.common_mods:
+            self.allModuleLessonList.append([module.sectional_list, 2])
             if module.sectional_list == []:
                 self.cannotGetTimetable()
                 print(module.moduleCode + " cannot sectional")
-            else:
-                if module.sectional_list == [self.nullLesson]:
-                    self.allModuleLessonList.append(module.sectional_list)
-                elif module.sectional_list[0].classNo[0].isnumeric():
-                    self.allModuleLessonList.append(module.sectional_list)
+
+
+        ## Individual mods
+        for i in range(len(self.moduleList)):
+            new_moduleList_sub = []
+            for module in self.moduleList[i]:
+                new_moduleList_sub.append(func.parameterise(module, module.moduleCode, param))
+            new_moduleList.append(new_moduleList_sub)
+
+        self.moduleList = []
+        for i in range(len(new_moduleList)):
+            for module in new_moduleList[i]:
+                module.updateLength()
+            subLst = sorted(new_moduleList[i], key=operator.attrgetter('length'))
+            self.moduleList.append(subLst)
+
+        for i in range(len(self.moduleList)):
+            for module in self.moduleList[i]:
+                self.allModuleLessonList.append([module.lecture_list, i])
+                if module.lecture_list == []:
+                    self.cannotGetTimetable()
+                    print(module.moduleCode + " cannot lecture")
+                
+        for i in range(len(self.moduleList)):
+            for module in self.moduleList[i]:
+                if module.tutorial_list == []:
+                    self.cannotGetTimetable()
+                    print(module.moduleCode + " cannot tutorial")
                 else:
-                    dict = {}
-                    for lesson in module.sectional_list:
-                        letter = lesson.classNo[0]
-                        if letter in dict.keys():
-                            dict[letter].append(lesson)
-                        else:
-                            dict[letter] = [lesson]
-                    for labs in dict.keys():
-                        self.allModuleLessonList.append(dict[labs])
+                    if module.tutorial_list == [self.nullLesson]:
+                        self.allModuleLessonList.append([module.tutorial_list, i])
+                    elif module.tutorial_list[0].classNo[0].isnumeric():
+                        self.allModuleLessonList.append([module.tutorial_list, i])
+                    else:
+                        dict = {}
+                        for lesson in module.tutorial_list:
+                            letter = lesson.classNo[0]
+                            if letter in dict.keys():
+                                dict[letter].append(lesson)
+                            else:
+                                dict[letter] = [lesson]
+                        for tuts in dict.keys():
+                            self.allModuleLessonList.append([dict[tuts], i])
+            
+        for i in range(len(self.moduleList)):
+            for module in self.moduleList[i]:
+                if module.laboratory_list == []:
+                    self.cannotGetTimetable()
+                    print(module.moduleCode + " cannot laboratory")
+                else:
+                    if module.laboratory_list == [self.nullLesson]:
+                        self.allModuleLessonList.append([module.laboratory_list, i])
+                    else:
+                        self.allModuleLessonList.append([module.laboratory_list, i])
+
+        for i in range(len(self.moduleList)):
+            for module in self.moduleList[i]:
+                self.allModuleLessonList.append([module.sectional_list, i])
+                if module.sectional_list == []:
+                    self.cannotGetTimetable()
+                    print(module.moduleCode + " cannot sectional")
 
 
     def generate(self, param):
@@ -289,17 +354,16 @@ class Student:
          
                 lessonAdded = False
 
-                
-                if str(allModuleLessonList[i][0]) != str(self.nullLesson):
+                if str(allModuleLessonList[i][0][0]) != str(self.nullLesson):
                     
                     rejlst = []
 
-                    for lesson in allModuleLessonList[i]:
+                    for lesson in allModuleLessonList[i][0]:
                         classNolst = []
                         if lesson.classNo in rejlst:
                             continue
 
-                        for classNoLesson in allModuleLessonList[i]:
+                        for classNoLesson in allModuleLessonList[i][0]:
                             
                             if classNoLesson.classNo == lesson.classNo:
                                 classNolst.append(classNoLesson)
@@ -312,53 +376,86 @@ class Student:
                             endTime = less.endTime - 8
                             count = 1
                             
-                            while count < param.timeBetween + 1:
-                                tempStart = startTime - count
-                                tempEnd = endTime + count - 1
-                                if tempStart >= 0:
-                                    if self.timetable[day][tempStart] != self.nullLesson:
-                                        possible = False
+                            if allModuleLessonList[i][1] == 2:
+                                for index in range(2):
+                                    while count < param.timeBetween + 1:
+                                        tempStart = startTime - count
+                                        tempEnd = endTime + count - 1
+                                        if tempStart >= 0:
+                                            if self.timetable[day][tempStart][index] != self.nullLesson:
+                                                possible = False
+                                                break
+                                        if tempEnd <= 11:
+                                            if self.timetable[day][tempEnd][index] != self.nullLesson:
+                                                possible = False 
+                                                break
+                                        count += 1
+                                    if possible == False:
                                         break
-                                if tempEnd <= 11:
-                                    if self.timetable[day][tempEnd] != self.nullLesson:
-                                        possible = False 
-                                        break
-                                count += 1
-                            if possible == False:
-                                break
+                            else:
+                                index = allModuleLessonList[i][1]
+                                while count < param.timeBetween + 1:
+                                    tempStart = startTime - count
+                                    tempEnd = endTime + count - 1
+                                    if tempStart >= 0:
+                                        if self.timetable[day][tempStart][index] != self.nullLesson:
+                                            possible = False
+                                            break
+                                    if tempEnd <= 11:
+                                        if self.timetable[day][tempEnd][index] != self.nullLesson:
+                                            possible = False 
+                                            break
+                                    count += 1
+                                if possible == False:
+                                    break
+
 
                         lessonAdded = False
+
                         if possible:
-                            lessonAdded = True
-                            for l in range(len(classNolst)):
-                                if self.addLesson(classNolst[l]) == False:
-                                    lessonAdded = False
-                                    count = 0
-                                    while count < l:
-                                        self.removeLesson(classNolst[count])
-                            if len(classNolst) > 1:
-                                rejlst.append(lesson.classNo)
+                            if allModuleLessonList[i][1] == 2:
+                                for index in range(2):
+                                    lessonAdded = True
+                                    for l in range(len(classNolst)):
+                                        if self.addLesson(classNolst[l], index) == False:
+                                            lessonAdded = False
+                                            count = 0
+                                            while count < l:
+                                                self.removeLesson(classNolst[count], index)
+                                    if len(classNolst) > 1:
+                                        rejlst.append(lesson.classNo)
+                            else:
+                                index = allModuleLessonList[i][1]
+                                lessonAdded = True
+                                for l in range(len(classNolst)):
+                                    if self.addLesson(classNolst[l], index) == False:
+                                        lessonAdded = False
+                                        count = 0
+                                        while count < l:
+                                            self.removeLesson(classNolst[count], index)
+                                if len(classNolst) > 1:
+                                    rejlst.append(lesson.classNo)
 
                         
                         if lessonAdded:
-                            #for l in classNolst:
-                                #print(l.moduleCode, l.lessonType, l.startTime, l.endTime, l.day)
-                            #print(self.debugTimetable())
-                            #print(i, len(allModuleLessonList) - 1)
                             
                             new_allModuleLessonList = allModuleLessonList.copy()
-                            new_allModuleLessonList[i] = [self.nullLesson]
+                            new_allModuleLessonList[i] = [[self.nullLesson], allModuleLessonList[i][1]]
                             if backtrack(param, new_allModuleLessonList) == False:
-                                for l in classNolst:
-                                    self.removeLesson(l)
-                                rejlst.append(l.classNo)
-                                #print(lesson.moduleCode, lesson.lessonType, lesson.startTime, lesson.endTime, lesson.day, 'yikes')
-                                lessonAdded = False
+                                if allModuleLessonList[i][1] == 2:
+                                    for index in range(2):
+                                        for l in classNolst:
+                                            self.removeLesson(l, index)
+                                        rejlst.append(l.classNo)
+                                        lessonAdded = False
+                                else:
+                                    index = allModuleLessonList[i][1]
+                                    for l in classNolst:
+                                        self.removeLesson(l, index)
+                                    rejlst.append(l.classNo)
+                                    lessonAdded = False
                             else:
                                 return True
-                        else:
-                            #print(lesson.moduleCode, lesson.lessonType, lesson.startTime, lesson.endTime, lesson.day, 'yikes')
-                            pass
                 else:
                     lessonAdded = True
                 if lessonAdded == False:
@@ -369,6 +466,7 @@ class Student:
             self.cannotGetTimetable()
         else:
             print("yay")
+            self.debugTimetable()
             self.updateModule_dict()
             
     def updateModule_dict(self):
@@ -399,7 +497,7 @@ class Student:
             for i in range(len(self.module_dict[module])):
                 if self.module_dict[module][i] != []:
                     for s in range(len(self.module_dict[module][i])):
-                        if self.module_dict[module][i][s].lessonType[-1].isnumeric():
+                        if self.module_dict[module][i][s].lessonType.startswith("Tutorial") and self.module_dict[module][i][s].lessonType[-1].isnumeric():
                             link += lessonType_lst[i] + str(ord(self.module_dict[module][i][s].classNo[0]) - ord('A') + 1) + ':' + self.module_dict[module][i][s].classNo + ','
                         else:
                             link += lessonType_lst[i] + ':' + self.module_dict[module][i][s].classNo + ','

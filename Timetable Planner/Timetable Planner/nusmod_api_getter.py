@@ -2,6 +2,7 @@ from urllib.request import urlopen
 import json
 import classes
 import operator
+from copy import deepcopy
 
 def create_module_class(acad_year, module_code, sem):
 
@@ -97,49 +98,76 @@ def parameterise(module, module_code, parameters):
 	if len(module.sectional_list) > 1:
 		new_module.resetLaboratory()
 
-	for lesson in module.sectional_list:
-		if (lesson.day != parameters.dayFree and lesson.startTime in parameters.startTimeList and lesson.endTime in parameters.endTimeList):
+	#for lesson in module.sectional_list:
+	#	if (lesson.day != parameters.dayFree and lesson.startTime in parameters.startTimeList and lesson.endTime in parameters.endTimeList):
 
-			if parameters.lessonMode == 'f2f':
-				if lesson.venue.startswith('E-Learn'):
-					lesson.lessonTypeNumber = 1
-				else:
-					lesson.lessonTypeNumber = 0
-			elif parameters.lessonMode == 'online':
-				if lesson.venue.startswith('E-Learn'):
-					lesson.lessonTypeNumber = 0
-				else:
-					lesson.lessonTypeNumber = 1
+	#		if parameters.lessonMode == 'f2f':
+	#			if lesson.venue.startswith('E-Learn'):
+	#				lesson.lessonTypeNumber = 1
+	#			else:
+	#				lesson.lessonTypeNumber = 0
+	#		elif parameters.lessonMode == 'online':
+	#			if lesson.venue.startswith('E-Learn'):
+	#				lesson.lessonTypeNumber = 0
+	#			else:
+	#				lesson.lessonTypeNumber = 1
 			
-			new_module.addLaboratory(lesson)
-	new_module.sectional_list = sorted(new_module.sectional_list, key=operator.attrgetter('lessonTypeNumber'))
+	#		new_module.addLaboratory(lesson)
+	#new_module.sectional_list = sorted(new_module.sectional_list, key=operator.attrgetter('lessonTypeNumber'))
+
+	if len(module.sectional_list) > 1:
+		new_module.resetSectional()
+
+	if module.lecture_list == [nullLesson]:
+		new_module.addSectional(nullLesson)
+	else:
+
+		for lesson in module.sectional_list:
+			if (lesson.day != parameters.dayFree and lesson.startTime in parameters.startTimeList and lesson.endTime in parameters.endTimeList):
+				new_module.addSectional(lesson)
+			else:
+				for otherLesson in module.lecture_list:
+					if otherLesson.classNo == lesson.classNo:
+						new_module.removeSectional(otherLesson)
 
 	return new_module
 
-## IMPT @NOMP.RONG USE THIS
-## args takes in all modules the student input
-def create_student(acad_year, sem, lst):
-	
-	moduleList = []
-	nullLesson = classes.Lesson("", 0, 0, [], "", "", "None", "", "", "", "", "")
-	module_dict = {}
+def get_common_mods(modules1, modules2):
+	comm = []
+	for module in modules1:
+		if module in modules2:
+			comm.append(module)
 
-	for module_code in lst:
-		mod = create_module_class(acad_year, module_code, sem)
-		mod.updateLength()
-		module_dict[module_code] = [[], [], [], []]
-		if mod.lecture_list != [nullLesson] or mod.laboratory_list != [nullLesson] \
-			or mod.tutorial_list != [nullLesson] or mod.sectional_list != [nullLesson]: ##Ignore mods like MA1521 without lessons
-			moduleList.append(mod)
-	student = classes.Student(moduleList, module_dict)
+	return comm
+
+## args takes in all modules the student input
+def create_student(acad_year, sem, modules, user):
+	
+	nullLesson = classes.Lesson("", 0, 0, [], "", "", "None", "", "", "", "", "")
+	moduleList = []
+	module_dict = []
+
+	for lst in modules:
+		moduleListSub = []
+		module_dict_sub = {}
+
+		for module_code in lst:
+			mod = create_module_class(acad_year, module_code, sem)
+			mod.updateLength()
+			module_dict_sub[module_code] = [[], [], [], []]
+			if mod.lecture_list != [nullLesson] or mod.laboratory_list != [nullLesson] \
+				or mod.tutorial_list != [nullLesson] or mod.sectional_list != [nullLesson]: ##Ignore mods like MA1521 without lessons
+				moduleListSub.append(mod)
+		moduleList.append(moduleListSub)
+		module_dict.append(module_dict_sub)
+
+	student = classes.Student(moduleList, module_dict, user, get_common_mods(moduleList[0], moduleList[1]))
 	student.forceLecture()
 	
 	return student
 
-# {'startTime': '8', 'endTime': '17', 'timeBetween': '2', 'lunchBreak': True, 'lessonMode': 'online', 'dayFree': 
-# 'Thursday', 'modules': ['CS2040S', 'CS2030S', 'GER1000', 'CS2040C', 'CS2100', 'GEQ1000'], 'sem': '1', 'acadYear': '2021-2022'}
 
-def parseJianrong(dict):
+def parseJianrong(dict, user=1):
 	startTimeList = []
 	endTimeList = []
 	acadYear = ""
@@ -161,6 +189,16 @@ def parseJianrong(dict):
 	dayFree = dict['dayFree']
 	sem = int(dict['sem'])
 	acadYear = dict['acadYear']
-	modules = dict['modules']
-	return classes.Parameters(startTimeList, endTimeList, timeBetween, lessonMode, dayFree),\
-	   sem, create_student(acadYear, sem, modules)
+
+	if user == 1:
+		modules = dict['modules']
+
+		return classes.Parameters(startTimeList, endTimeList, timeBetween, lessonMode, dayFree),\
+			sem, create_student(acadYear, sem, [modules, []], user)
+	elif user == 2:
+		modules1 = dict['modules1']
+		modules2 = dict['modules2']
+
+		return classes.Parameters(startTimeList, endTimeList, timeBetween, lessonMode, dayFree),\
+			sem, create_student(acadYear, sem, [modules1, modules2], user)
+
