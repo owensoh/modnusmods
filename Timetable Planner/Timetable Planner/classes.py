@@ -374,10 +374,11 @@ class Student:
                             day = self.days[less.day]
                             startTime = less.startTime - 8
                             endTime = less.endTime - 8
-                            count = 1
+                            
                             
                             if allModuleLessonList[i][1] == 2:
                                 for index in range(2):
+                                    count = 1
                                     while count < param.timeBetween + 1:
                                         tempStart = startTime - count
                                         tempEnd = endTime + count - 1
@@ -393,6 +394,7 @@ class Student:
                                     if possible == False:
                                         break
                             else:
+                                count = 1
                                 index = allModuleLessonList[i][1]
                                 while count < param.timeBetween + 1:
                                     tempStart = startTime - count
@@ -470,41 +472,87 @@ class Student:
             self.updateModule_dict()
             
     def updateModule_dict(self):
-        for day in self.timetable:
-            for hour in day:
-                if hour != self.nullLesson:
-                    if hour.lessonType.startswith("Lecture"):
-                        if hour not in self.module_dict[hour.moduleCode][0]:
-                            self.module_dict[hour.moduleCode][0].append(hour)
-                    elif hour.lessonType.startswith("Tutorial"):
-                        if hour not in self.module_dict[hour.moduleCode][1]:
-                            self.module_dict[hour.moduleCode][1].append(hour)
-                    elif hour.lessonType.startswith("Laboratory"):
-                        if hour not in self.module_dict[hour.moduleCode][2]:
-                            self.module_dict[hour.moduleCode][2].append(hour)
-                    elif hour.lessonType.startswith("Sectional"):
-                        if hour not in self.module_dict[hour.moduleCode][3]:
-                            self.module_dict[hour.moduleCode][3].append(hour)
 
-    def generateNusmodsLink(self, sem):
+        for index in range(2):
+            for day in self.timetable:
+                for hour in day:
+                    if hour[index] != self.nullLesson:
+                        if hour[index].lessonType.startswith("Lecture"):
+                            if hour[index] not in self.module_dict[index][hour[index].moduleCode][0]:
+                                self.module_dict[index][hour[index].moduleCode][0].append(hour[index])
+                        elif hour[index].lessonType.startswith("Tutorial"):
+                            if hour[index] not in self.module_dict[index][hour[index].moduleCode][1]:
+                                self.module_dict[index][hour[index].moduleCode][1].append(hour[index])
+                        elif hour[index].lessonType.startswith("Laboratory"):
+                            if hour[index] not in self.module_dict[index][hour[index].moduleCode][2]:
+                                self.module_dict[index][hour[index].moduleCode][2].append(hour[index])
+                        elif hour[index].lessonType.startswith("Sectional"):
+                            if hour[index] not in self.module_dict[index][hour[index].moduleCode][3]:
+                                self.module_dict[index][hour[index].moduleCode][3].append(hour[index])
+
+    def generateNusmodsLink(self, sem, index):
+        index -= 1
         if sem == 1:
             link = "https://nusmods.com/timetable/sem-1/share?"
         elif sem == 2:
             link = "https://nusmods.com/timetable/sem-2/share?"
         lessonType_lst = ['LEC', 'TUT', 'LAB', 'SEC']
-        for module in self.module_dict.keys():
+        for module in self.module_dict[index].keys():
             link += module + "="
-            for i in range(len(self.module_dict[module])):
-                if self.module_dict[module][i] != []:
-                    for s in range(len(self.module_dict[module][i])):
-                        if self.module_dict[module][i][s].lessonType.startswith("Tutorial") and self.module_dict[module][i][s].lessonType[-1].isnumeric():
-                            link += lessonType_lst[i] + str(ord(self.module_dict[module][i][s].classNo[0]) - ord('A') + 1) + ':' + self.module_dict[module][i][s].classNo + ','
+            for i in range(len(self.module_dict[index][module])):
+                if self.module_dict[index][module][i] != []:
+                    for s in range(len(self.module_dict[index][module][i])):
+                        if self.module_dict[index][module][i][s].lessonType.startswith("Tutorial") and self.module_dict[index][module][i][s].lessonType[-1].isnumeric():
+                            link += lessonType_lst[i] + str(ord(self.module_dict[index][module][i][s].classNo[0]) - ord('A') + 1) + ':' + self.module_dict[index][module][i][s].classNo + ','
                         else:
-                            link += lessonType_lst[i] + ':' + self.module_dict[module][i][s].classNo + ','
+                            link += lessonType_lst[i] + ':' + self.module_dict[index][module][i][s].classNo + ','
             link += '&'
         return link
 
+    def timetable_data(self):
+        day_dict = {
+            "Monday": 0,
+            "Tuesday": 1,
+            "Wednesday": 2,
+            "Thursday": 3,
+            "Friday": 4
+        }
+        timetable1 = [[], [], [], [], []]
+        timetable2 = [[], [], [], [], []]
+        remove_list = []
+        empty_cell = { "name": "empty", "lesssontype": "empty", "duration": 1}
+        invalid_cell = {"name": "", "lesssontype": "empty", "duration": 1}
+        for day in range(5):
+            for cell in range(24):
+                timetable1[day].append(empty_cell)
+                timetable2[day].append(empty_cell)
 
+        for i in range(2):
+            for key in self.module_dict[i]:
+                for lesson in self.module_dict[i][key]:
+                    for slot in lesson:
+                        moduleCode = slot.moduleCode
+                        lessonType = slot.lessonType
+                        startTime = int(slot.actualStartTime[:2])
+                        endTime = int(slot.actualEndTime[:2])
+                        index = (startTime - 8) * 2
+                        duration = (endTime - startTime) * 2
+                        day = slot.day
+                        slot_dict = {"name": moduleCode, "lessontype": lessonType, "duration": (endTime - startTime) * 2}
+                        if i == 0:
+                            timetable1[day_dict[day]][index] = slot_dict
+                            for j in range(index + 1 , index+duration):
+                                timetable1[day_dict[day]][j] = invalid_cell
+                                print(timetable1[day_dict[day]])
+                        else:
+                            timetable2[day_dict[day]][index] = slot_dict
+                            for j in range(index + 1 , index+duration):
+                                timetable2[day_dict[day]][j] = invalid_cell
+                                print(timetable2[day_dict[day]])
+
+        return timetable1, timetable2
+        # with open("test.json", 'w') as json_file:
+        #     json.dump(timetable, json_file)
 
 
 

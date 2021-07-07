@@ -69,6 +69,46 @@ def newerTestCase1():
 	   'modules2': ["ST2334", "LAJ1201", "CS2107", "CS2100", "GES1041"],
 	  'sem': '1', 'acadYear': '2021-2022'}, 2) 
 
+def newerTestCase2():
+	return func.parseJianrong({'startTime': '8', 'endTime': '18', 'timeBetween': '1', 'lunchBreak': True, 'lessonMode': '',\
+	   'dayFree': '', 'modules1': ["CS2105", "CS2106", "ST2334", "CS2113", "LAJ1201", "CS2107"], \
+	   'modules2': ["ST2334", "LAJ1201", "CS2107", "CS2100", "GES1041"],
+	  'sem': '1', 'acadYear': '2021-2022'}, 2) 
+
+def newerTestCase3():
+	return func.parseJianrong({'startTime': '8', 'endTime': '18', 'timeBetween': '0', 'lunchBreak': False, 'lessonMode': '',\
+	   'dayFree': '', 'modules1': ["CS2105", "CS2106", "ST2334", "CS2113", "LAJ1201", "CS2107"], \
+	   'modules2': ["CS2030S", "MA1521", "CS2040S", "CS2100", "GES1041"],
+	  'sem': '1', 'acadYear': '2021-2022'}, 2) 
+
+def timetable(dict):
+
+    param, sem, student = func.parseJianrong(dict)
+    link = ""
+    timetable_json = {}
+
+
+    if student.impossible:
+        return False, link, timetable_json
+    else:
+        print(student)
+        print("__")
+        student.addParam(param)
+        if student.impossible:
+            return False, link, timetable_json
+        else:
+            student.generate(param)
+            print(student)
+            if student.impossible:
+                return False, link, timetable_json
+            else:
+                link = student.generateNusmodsLink(sem)
+                print(link)
+                timetable_json = student.timetable_data()
+                # FOR TESTING PURPOSES 
+                # webbrowser.open(link)
+                return True, link, timetable_json
+
 if __name__ == "__main__":
 	
 	# SEND USER NUMBER HERE
@@ -102,14 +142,18 @@ if __name__ == "__main__":
 				if student.impossible:
 					print('sadge')
 				else:
-					link = student.generateNusmodsLink(sem)
-					print(link)
+					link1 = student.generateNusmodsLink(sem, 1)
+					print(link1)
 
 					# FOR TESTING PURPOSES 
-					#webbrowser.open(link)
+					webbrowser.open(link1)
 
 	elif user == 2:
-		param, sem, student = newerTestCase1()
+
+		#param, sem, student = newerTestCase1()
+		#param, sem, student = newerTestCase2()
+		param, sem, student = newerTestCase3()
+
 		if student.impossible:
 			print("sadge")
 		else:
@@ -124,11 +168,14 @@ if __name__ == "__main__":
 				if student.impossible:
 					print('sadge')
 				else:
-					link = student.generateNusmodsLink(sem)
-					print(link)
+					link1 = student.generateNusmodsLink(sem, 1)
+					print(link1)
+					link2 = student.generateNusmodsLink(sem, 2)
+					print(link2)
 
 					# FOR TESTING PURPOSES 
-					#webbrowser.open(link)
+					webbrowser.open(link1)
+					webbrowser.open(link2)
 		
 
 
@@ -143,5 +190,3 @@ if __name__ == "__main__":
 
 
 #DONEZO
-
-#UPDATE MODULE DICT NXT
